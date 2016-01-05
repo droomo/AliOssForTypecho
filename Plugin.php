@@ -5,9 +5,9 @@ require_once 'AliOssSdk/sdk.class.php';
 /**
  * AliyunOSS储存Typecho上传附件.
  * 
- * @package AliOssForTypecho
+ * @package AliOssForTypecho 
  * @author droomo.
- * @version 1.0 
+ * @version 1.0.1
  * @link http://www.droomo.top/ 
  */
 class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
@@ -168,9 +168,11 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
             return FALSE;
         }
 
+        date_default_timezone_set('PRC');
+        $testDate = date('Y/m/d/');
         $options = Typecho_Widget::widget('Widget_Options');
-        $date = new Typecho_Date($options->gmtTime);        
-        $path = $date->year . '/' . $date->month. '/' . $date->day . '/';
+        $path = $testDate;
+        //error_log(date('h:m:sa'), 3, self::log_path . 'error.log');
                 
         //获取文件名
         $fileName = substr(time(), 5) . sprintf('%u', crc32(uniqid())) . '.' . $ext;
@@ -240,7 +242,7 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
                 $saveOnServerSuccess = FALSE;
                 
                 //保存文件到服务器
-
+                $error_log_path = self::log_path;
                 if ($mkdirSuccess) 
                 {
                     if (file_put_contents($localPath.$fileName, $content)) 
@@ -581,6 +583,7 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
         $info = pathinfo($name);
         $name = substr($info['basename'], 1);
     
-        return isset($info['extension']) ? $info['extension'] : '';
+        //return isset($info['extension']) ? $info['extension'] : '';
+        return isset($info['extension']) ? strtolower($info['extension']) : '';
     }
 }
