@@ -10,7 +10,7 @@ use OSS\Core\OssException;
  * 
  * @package AliOssForTypecho 
  * @author droomo.
- * @version 1.0.1
+ * @version 1.1.1
  * @link https://www.droomo.top/
  */
 class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
