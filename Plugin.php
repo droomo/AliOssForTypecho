@@ -15,8 +15,8 @@ use OSS\Core\OssException;
  */
 class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
 {
-    const log_path = 'usr/plugins/AliOssForTypecho/logs/';//错误日志路径，相对网站根目录
-    const UPLOAD_DIR = 'usr/uploads/';//上传文件目录
+    const UPLOAD_DIR = 'usr/uploads/';//上传文件目录，相对网站根目录
+    const LOG_SUFFIX = '__oss-plugin-log/';//日志目录，放置于UPLOAD_DIR下
 
     /**
      * 激活插件方法,如果激活失败,直接抛出异常
@@ -34,7 +34,6 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
         Typecho_Plugin::factory('Widget_Upload')->attachmentDataHandle = array('AliOssForTypecho_Plugin', 'attachmentDataHandle');
 
         return _t('启用成功，请进行相应设置！');
-
     }
     
     /**
@@ -56,24 +55,23 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
      */
     public static function config(Typecho_Widget_Helper_Form $form)
     {
-
         $upload_dir = $localPath = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
             defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__);
 
         $des = new Typecho_Widget_Helper_Form_Element_Text('des', NULL, '', _t('插件使用说明'),
             '<ol>
-<li>插件更新于2018-06-05</li>
-<li>插件基于<a href="https://github.com/aliyun/aliyun-oss-php-sdk/releases/tag/v2.3.0">aliyun-oss-php-sdk Release 2.3.0</a>开发，
-若以后SDK开发包更新导致插件不可用，请到 <a target="_blank" href="https://www.droomo.top/AliOssForTypecho.html">我的博客</a> ^ - ^获取新版本插件，
-如果我还用typecho还用阿里云就会更新。<br/></li>
-<li>请赋予目录<p style="margin: 0;padding:0">'.$upload_dir.'</p><p style="margin: 0;padding:0">'. __TYPECHO_ROOT_DIR__ .'/'. self::log_path . '</p>写权限，否则可能导致上传失败。</li>
-<li>若开启“在服务器保留备份”功能：<br>
-成功保存文件到OSS但没有成功保存到服务器的情况下插件不会报错，
-<font color="red">这将导致当前文件在服务器上没有备份</font>，但是会在' . __TYPECHO_ROOT_DIR__ .'/'. self::log_path . '目录下生成错误日志"error.log"，请定期查阅并清理。<br/></li>
-<li>运行在云应用引擎上的站点“在服务器保留备份”选项无效。<br/></li>
+<li>插件更新于2020年6月25号。</li>
+<li>插件基于<a href="https://github.com/aliyun/aliyun-oss-php-sdk/releases/tag/v2.3.1">aliyun-oss-php-sdk Release 2.3.1</a>开发，
+若以后SDK开发包更新导致插件不可用，请到 <a target="_blank" href="https://www.droomo.top/AliOssForTypecho.html">我的博客^-^</a>获取新版本插件，如果我还用typecho、阿里云OSS就会更新。<br/></li>
+<li>若开启“在服务器保留备份”功能，请注意：<br>
+1）请赋予以下目录写权限：<code style="color:#333;font-size:12px;">'.$upload_dir.'</code><br/>
+2）当文件成功上传到OSS，但保存到服务器失败时，插件不会报错，<font color="red">这将导致当前文件在服务器上没有备份</font>，但是会在此插件页面显示日志，请定期查阅并清理。<br/></li>
+3）运行在云应用引擎上的站点“在服务器保留备份”选项无效。<br/>
 <li>旧版本Typecho存在无法上传大写扩展名文件的bug，请更新Typecho程序。<br/></li>
-<li>如有问题或建议请到 <a target="_blank" href="https://www.droomo.top/AliOssForTypecho.html">我的博客</a> 留言</li>
+<li>如有问题或建议请到 <a target="_blank" href="https://www.droomo.top/AliOssForTypecho.html">我的博客https://www.droomo.top/AliOssForTypecho.html</a> 留言</li>
 </ol>');
+        
+
         $form->addInput($des);
         
         $buketName = new Typecho_Widget_Helper_Form_Element_Text('bucketName', NULL, null,
@@ -112,7 +110,7 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
                 "oss-eu-central-1"  =>  "欧洲中部1（法兰克福）oss-eu-central-1",
                 "oss-eu-west-1"     =>  "英国（伦敦）oss-eu-west-1",
                 "oss-me-east-1"     =>  "中东东部1（迪拜）oss-me-east-1",
-                "other"                => '自定义'
+                "other"             => '自定义'
             ),
             'oss-cn-qingdao',
             _t('区域选择（若区域不在列表中则选择自定义，然后填写区域）'), '');
@@ -127,8 +125,9 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
             '<span class="AliossForTypecho-mark-other-endpoint-hide">在你了解两种连接方式的不同作用的情况下修改此选项</span>');
         $form->addInput($endPointType);
         
-        $otherEndPoint = new Typecho_Widget_Helper_Form_Element_Text('otherEndPoint', NULL, '自定义EndPoint，例如"oss-cn-qingdao.aliyuncs.com"',
-            '<label class="AliossForTypecho-mark-other-endpoint-show">自定义EndPoint</label>', '<span class="AliossForTypecho-mark-other-endpoint-show">填写全部Endpoint，通常以\'.aliyuncs.com\'或\'-internal.aliyuncs.com\'结尾，开头不包含http://，结尾不包含"/"</span>');
+        $otherEndPoint = new Typecho_Widget_Helper_Form_Element_Text('otherEndPoint', NULL, '',
+            '<label class="AliossForTypecho-mark-other-endpoint-show">自定义EndPoint</label>', '<span class="AliossForTypecho-mark-other-endpoint-show">
+            填写全部Endpoint地址，通常以\'.aliyuncs.com\'或\'-internal.aliyuncs.com\'结尾。开头不包含http://，结尾不包含"/"。<br/>例如"oss-cn-qingdao.aliyuncs.com"</span>');
         $form->addInput($otherEndPoint);
         
         $userDir = new Typecho_Widget_Helper_Form_Element_Text('userDir', NULL, 'typecho/',
@@ -199,34 +198,14 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
      * @return mixed
      */
     public static function uploadHandle($file)
-    {   
+    {
         if (empty($file['name'])) {
             return FALSE;
         }
-
-        $options = Typecho_Widget::widget('Widget_Options');
-        $userDir     = $options->plugin('AliOssForTypecho')->userDir;
-        $bucket_name = $options->plugin('AliOssForTypecho')->bucketName;
-        $end_point   = 'http://' . (($options->plugin('AliOssForTypecho')->endPoint === "other") ?
-                $options->plugin('AliOssForTypecho')->otherEndPoint :
-                $options->plugin('AliOssForTypecho')->endPoint . $options->plugin('AliOssForTypecho')->endPointType);
-        $access_id   = $options->plugin('AliOssForTypecho')->accessKeyId;
-        $access_key  = $options->plugin('AliOssForTypecho')->accessKeySecret;
-        
         $ext = self::getExtentionName($file['name']);
-
         if (!self::checkFileType($ext)) {
             return FALSE;
         }
-
-        date_default_timezone_set('PRC');
-
-        $file_origin_name = self::getSafeName($file['name']);
-        $file_id = substr(time(), 5) . sprintf('%u', crc32(uniqid()));
-
-        $relative_path = date('Y/m/d/') . $file_id . '/' . $file_origin_name;
-        $object_name = $userDir . $relative_path;
-
         if (isset($file['tmp_name'])) {
             $content = file_get_contents($file['tmp_name']);
         } else if (isset($file['bytes'])) {
@@ -234,42 +213,118 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
         } else {
             return FALSE;
         }
+
+        $options = Typecho_Widget::widget('Widget_Options');
+        $user_dir     = $options->plugin('AliOssForTypecho')->userDir;
+        $bucket_name = $options->plugin('AliOssForTypecho')->bucketName;
+        $end_point   = 'http://' . (($options->plugin('AliOssForTypecho')->endPoint === "other") ?
+                $options->plugin('AliOssForTypecho')->otherEndPoint :
+                $options->plugin('AliOssForTypecho')->endPoint . $options->plugin('AliOssForTypecho')->endPointType);
+        $access_id   = $options->plugin('AliOssForTypecho')->accessKeyId;
+        $access_key  = $options->plugin('AliOssForTypecho')->accessKeySecret;
+
         try {
-            $client = new OssClient($access_id, $access_key, $end_point);
+            $oss_client = new OssClient($access_id, $access_key, $end_point);
         } catch (Exception $e) {
-            throw new Exception( $e->getMessage());
+            return FALSE;
         }
 
-        $ali_response = $client->putObject($bucket_name, $object_name, $content);
+        $save_on_server = $options->plugin('AliOssForTypecho')->ifLoaclSave;
+
+        $file_origin_name = self::getSafeName($file['name']);
+        $relative_path = date('Y/m/d/');
+        
+        $remote_file_name = $user_dir . $relative_path . $file_origin_name;
+
+        if ($save_on_server === "1" && !Typecho_Common::isAppEngine()) {
+
+            $upload_root = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
+                            defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__);
+            
+            $local_file_name = $upload_root . $relative_path . $file_origin_name;
+            try{
+                $exist_on_oss = $oss_client->doesObjectExist($bucket_name, $remote_file_name);
+                $exist_on_server = file_exists($local_file_name);
+            } catch(OssException $e) {
+                return false;
+            }
+            
+            if ($exist_on_oss || $exist_on_server) {
+                // find a name neither exist on oss nor the server
+                $pathinfo = pathinfo($file_origin_name);
+                for ($i = 1;; $i++) {
+                    $file_origin_name = $pathinfo['filename'] . '(' . strval($i) . ').' . self::getExtentionName($file_origin_name);
+                    $remote_file_name = $user_dir . $relative_path . $file_origin_name;
+                    $local_file_name = $upload_root . $relative_path . $file_origin_name;
+                    
+                    try{
+                        $exist_on_oss = $oss_client->doesObjectExist($bucket_name, $remote_file_name);
+                        $exist_on_server = file_exists($local_file_name);
+                    } catch(OssException $e) {
+                        return false;
+                    }
+
+                    if ($exist_on_oss || $exist_on_server) {
+                    } else {
+                        break;
+                    }
+                }
+            }
+        } else {
+            try{
+                $exist_on_oss = $oss_client->doesObjectExist($bucket_name, $remote_file_name);
+            } catch(OssException $e) {
+                return false;
+            }
+            if ($exist_on_oss || $exist_on_server) {
+                // find a name not exist on oss
+                $pathinfo = pathinfo($file_origin_name);
+                for ($i = 1;; $i++) {
+                    $file_origin_name = $pathinfo['filename'] . '(' . strval($i) . ').' . self::getExtentionName($file_origin_name);
+                    $remote_file_name = $user_dir . $relative_path . $file_origin_name;
+                    
+                    try{
+                        $exist_on_oss = $oss_client->doesObjectExist($bucket_name, $remote_file_name);
+                    } catch(OssException $e) {
+                        return false;
+                    }
+
+                    if (!$exist_on_oss) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        try{
+            $ali_response = $oss_client->putObject($bucket_name, $remote_file_name, $content);
+        } catch(OssException $e) {
+            return false;
+        }
 
         if (200 != $ali_response['info']['http_code']) {
             return FALSE;
         } else {
             $object_url = $ali_response['info']["url"];
-
-            $ifLoaclSave = $options->plugin('AliOssForTypecho')->ifLoaclSave;
                          
-            if ($ifLoaclSave === "1" && !Typecho_Common::isAppEngine()) {
-              
-                $localPath = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
-                              defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__) 
-                              . date('Y/m/d/') . $file_id . '/';
-                $mkdirSuccess = TRUE;
-                if (!is_dir($localPath)) {
-                    if (!self::makeUploadDir($localPath)) {
-                        $mkdirSuccess = FALSE;
+            if ($save_on_server === "1" && !Typecho_Common::isAppEngine()) {
+                $file_dir_name = dirname($local_file_name);
+                $dir_exist = false;
+
+                if (is_dir($file_dir_name)) {
+                    $dir_exist = true;
+                } else {
+                    if (self::makeUploadDir($file_dir_name)) {
+                        $dir_exist = true;
                     }
                 }
-                $error_log_path = self::log_path;
-                if ($mkdirSuccess) {
-                    if (file_put_contents($localPath.$file_origin_name, $content)) {
-                    } else {
-                        $error = '错误：保存文件失败' . "\r\n" .
-                                 '远程文件：' . $object_url . "\r\n" .
-                                 '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
-                        error_log($error, 3, $error_log_path . "error.log");
+                $error_log_path = $upload_root . self::LOG_SUFFIX;
+                if ($dir_exist) {
+                    if (!file_put_contents($local_file_name, $content)) {
+                        return false;
                     }
                 } else {
+                    return false;
                     $error = '错误：创建目录失败' . "\r\n" .
                              '创建路径：' . $localPath . "\r\n" .
                              '远程文件：' . $object_url . "\r\n" .
@@ -280,11 +335,12 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
 
             return array(
                 'name' => $file_origin_name,
-                'path' => $relative_path,
+                'path' => $remote_file_name,
                 'size' => intval($ali_response['oss-requestheaders']['Content-Length']),
                 'type' => $ext,
                 'mime' => $ali_response['oss-requestheaders']['Content-Type']
             );
+            
         }
     }
 
@@ -331,12 +387,12 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
         }
 
         try {
-            $client = new OssClient($access_id, $access_key, $end_point);
+            $oss_client = new OssClient($access_id, $access_key, $end_point);
         } catch (Exception $e) {
             throw new Exception( $e->getMessage());
         }
 
-        $ali_response = $client->putObject($bucket_name, $object_name, $newContent);
+        $ali_response = $oss_client->putObject($bucket_name, $object_name, $newContent);
 
         if (200 != $ali_response['info']['http_code']) {
             return FALSE;
@@ -345,10 +401,11 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
 
             $ifLoaclSave = $options->plugin('AliOssForTypecho')->ifLoaclSave;
                          
-            if ($ifLoaclSave === "1" && !Typecho_Common::isAppEngine())
-            {
-                $localFile = Typecho_Common::url(self::UPLOAD_DIR . $path, 
-                    defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__);   
+            if ($ifLoaclSave === "1" && !Typecho_Common::isAppEngine()) {
+                $upload_root = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
+                    defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__);
+                $localFile = $upload_root . $path;
+
                 $localPath = dirname($localFile);
 
                 $mkdirSuccess = TRUE;
@@ -358,15 +415,11 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
                     }
                 }
 
-                $error_log_path = self::log_path;
-                if ($mkdirSuccess)
-                {
+                if ($mkdirSuccess) {
                     $deleteLacalFileSuccess = unlink($localFile);
-                    if (!$deleteLacalFileSuccess)
-                    {
-                        $error_log_path = self::log_path;
-                        if (!is_dir($error_log_path))
-                        {
+                    if (!$deleteLacalFileSuccess) {
+                        $error_log_path = $upload_root . self::LOG_SUFFIX;
+                        if (!is_dir($error_log_path)) {
                             self::makeUploadDir($error_log_path);          
                         }
                         $error = '错误：删除文件失败导致无法修改文件' . "\r\n" .
@@ -376,16 +429,14 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
                         error_log($error, 3, $error_log_path . "error.log");
                     } else {
                         if (file_put_contents($localFile, $newContent)) {
-                        } else 
-                        {
+                        } else {
                             $error = '错误：保存文件失败' . "\r\n" .
                                      '远程文件：' . $object_url . "\r\n" .
                                      '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
                             error_log($error, 3, $error_log_path . "error.log");
                         }
                     }
-                } else 
-                {
+                } else {
                     $error = '错误：创建目录失败' . "\r\n" .
                              '创建路径：' . $localPath . "\r\n" .
                              '远程文件：' . $object_url . "\r\n" .
@@ -423,29 +474,27 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
         $access_key  = $options->plugin('AliOssForTypecho')->accessKeySecret;
 
         try {
-            $client = new OssClient($access_id, $access_key, $end_point);
+            $oss_client = new OssClient($access_id, $access_key, $end_point);
         } catch (Exception $e) {
             throw new Exception( $e->getMessage());
         }
 
         $path = $content['attachment']->path;
         $object_name = $userDir . $path;
-        $ali_response = $client->deleteObject($bucket_name, $object_name);
+        $ali_response = $oss_client->deleteObject($bucket_name, $object_name);
         
         $ifLoaclSave = $options->plugin('AliOssForTypecho')->ifLoaclSave;
         if ($ifLoaclSave === "1" && !Typecho_Common::isAppEngine()) {
-            $localPath = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
-                                  defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__) 
-                                  . $path;
-                                  
+            $upload_root = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
+                                defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__);
+            $localPath = $upload_root . $path;
+
             $deleteLacalFileSuccess = unlink($localPath);
 
-            if (!$deleteLacalFileSuccess) 
-            {
-                $error_log_path = self::log_path;
-                if (!is_dir($error_log_path))
-                {
-                    self::makeUploadDir($error_log_path);          
+            if (!$deleteLacalFileSuccess) {
+                $error_log_path = $localPath . self::LOG_SUFFIX;
+                if (!is_dir($error_log_path)) {
+                    self::makeUploadDir($error_log_path);
                 }
                 $error = '错误：删除文件失败' . "\r\n" .
                          '文件：' . $localPath . "\r\n" .
@@ -467,15 +516,14 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
         $options = Typecho_Widget::widget('Widget_Options');
         
         $cdnUrl  = $options->plugin('AliOssForTypecho')->cdnUrl;
-        $userDir = $options->plugin('AliOssForTypecho')->userDir;
         if ($cdnUrl == '') {
             $bucket_name = $options->plugin('AliOssForTypecho')->bucketName;
             $end_point   = ($options->plugin('AliOssForTypecho')->endPoint === "other") ? 
                             $options->plugin('AliOssForTypecho')->otherEndPoint : 
                             $options->plugin('AliOssForTypecho')->endPoint;
-            return 'https://' . $bucket_name . '.' . $end_point . '.aliyuncs.com/' . $userDir . $content['attachment']->path;
+            return 'https://' . $bucket_name . '.' . $end_point . '.aliyuncs.com/' . $content['attachment']->path;
         } else {
-            return $cdnUrl . $userDir . $content['attachment']->path;
+            return $cdnUrl . $content['attachment']->path;
         }
     }
 
