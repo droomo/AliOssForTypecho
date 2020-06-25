@@ -1,6 +1,6 @@
 <?php
 
-require_once 'aliyun-oss-php-sdk-2.3.0/autoload.php';
+require_once 'aliyun-oss-php-sdk-2.3.1/autoload.php';
 
 use OSS\OssClient;
 use OSS\Core\OssException;
@@ -195,7 +195,7 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
      * @return mixed
      */
     public static function uploadHandle($file)
-    {
+    {   
         if (empty($file['name'])) {
             return FALSE;
         }
