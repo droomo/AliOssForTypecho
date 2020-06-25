@@ -55,8 +55,29 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
      */
     public static function config(Typecho_Widget_Helper_Form $form)
     {
-        $upload_dir = $localPath = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
-            defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__);
+        $upload_root = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
+                            defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__);
+        
+        $log_name = $upload_root . self::LOG_SUFFIX . 'error.log';
+
+        if (is_writable($upload_root) && is_writable($upload_root . self::LOG_SUFFIX) && is_writable($log_name)) {
+            $log_content = '恭喜！暂无错误日志产生，请继续保持维护，加油～';
+            $log_color = '#009900';
+            if (file_exists($log_name)) {
+                $handle = fopen($log_name, "r");
+                $content = fread($handle, filesize($log_name));
+                if ($content) {
+                    $log_content = $content;
+                    $log_color = '#dd0000';
+                }
+                fclose($handle);
+            }
+        } else {
+            $log_content = '！！！注意！！！ 
+当前网站上传目录无写入权限，无法记录日志！
+请给路径 '.$upload_root.' 赋予写入权限';
+            $log_color = '#f00000';
+        }
 
         $des = new Typecho_Widget_Helper_Form_Element_Text('des', NULL, '', _t('插件使用说明'),
             '<ol>
@@ -64,14 +85,16 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
 <li>插件基于<a href="https://github.com/aliyun/aliyun-oss-php-sdk/releases/tag/v2.3.1">aliyun-oss-php-sdk Release 2.3.1</a>开发，
 若以后SDK开发包更新导致插件不可用，请到 <a target="_blank" href="https://www.droomo.top/AliOssForTypecho.html">我的博客^-^</a>获取新版本插件，如果我还用typecho、阿里云OSS就会更新。<br/></li>
 <li>若开启“在服务器保留备份”功能，请注意：<br>
-1）请赋予以下目录写权限：<code style="color:#333;font-size:12px;">'.$upload_dir.'</code><br/>
+1）请赋予以下目录写权限：<code style="color:#333;font-size:12px;">'.$upload_root.'</code><br/>
 2）当文件成功上传到OSS，但保存到服务器失败时，插件不会报错，<font color="red">这将导致当前文件在服务器上没有备份</font>，但是会在此插件页面显示日志，请定期查阅并清理。<br/></li>
 3）运行在云应用引擎上的站点“在服务器保留备份”选项无效。<br/>
 <li>旧版本Typecho存在无法上传大写扩展名文件的bug，请更新Typecho程序。<br/></li>
 <li>如有问题或建议请到 <a target="_blank" href="https://www.droomo.top/AliOssForTypecho.html">我的博客https://www.droomo.top/AliOssForTypecho.html</a> 留言</li>
-</ol>');
+</ol>
+<p>以下是本插件产生的错误日志，请定期查看并处理：</p>
+<div style="margin:0 auto;width:90%;">
+<textarea style="color:'.$log_color.';height:160px;">'.$log_content.'</textarea></div>');
         
-
         $form->addInput($des);
         
         $buketName = new Typecho_Widget_Helper_Form_Element_Text('bucketName', NULL, null,
