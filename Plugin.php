@@ -10,7 +10,7 @@ use OSS\Core\OssException;
  * 
  * @package AliOssForTypecho 
  * @author droomo.
- * @version 1.1.4
+ * @version 1.1.5
  * @link https://www.droomo.top/
  */
 class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
@@ -440,8 +440,22 @@ window.onload = function() {
         $access_key  = $options->plugin('AliOssForTypecho')->accessKeySecret;
          
         $path = $content['attachment']->path;
-        
+
         $remote_file_name = $userDir . $path;
+        
+        $ifLoaclSave = $options->plugin('AliOssForTypecho')->ifLoaclSave;
+        $upload_root = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
+                    defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__);
+        $local_file_name = $upload_root . $path;
+
+        if ($ifLoaclSave && (!is_writable($upload_root) || !is_writable($local_file_name))) {
+            $error = '错误：修改文件失败，旧文件无写权限' . "\r\n" .
+                            '本地文件：' . $local_file_name . "\r\n" .
+                            '远程文件：' . $remote_file_name . "\r\n" .
+                            '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
+            self::my_error_log($error);
+            return false;
+        }
 
         try {
             $oss_client = new OssClient($access_id, $access_key, $end_point);
@@ -471,18 +485,12 @@ window.onload = function() {
                     '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
             self::my_error_log($error);
             return false;
-        } else {
-            $ifLoaclSave = $options->plugin('AliOssForTypecho')->ifLoaclSave;
-                         
+        } else {                         
             if ($ifLoaclSave === "1" && !Typecho_Common::isAppEngine()) {
-                $upload_root = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
-                    defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__);
-                $local_file_name = $upload_root . $path;
-
                 if (file_exists($local_file_name) && !unlink($local_file_name)) {
                     $error = '错误：修改文件失败，无法删除旧文件' . "\r\n" .
                                 '本地文件：' . $local_file_name . "\r\n" .
-                                '远程文件：' . $object_url . "\r\n" .
+                                '远程文件：' . $remote_file_name . "\r\n" .
                                 '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
                     self::my_error_log($error);
                     return false;
