@@ -583,18 +583,26 @@ window.onload = function() {
             
             $delete_local_succeed = false;
             if (file_exists($local_file_name)) {
-                $delete_local_succeed = unlink($local_file_name);
-                if (!$delete_local_succeed) {
+                if (!is_writable($local_file_name)) {
                     $error = '错误：删除本地文件失败，请检查权限设置' . "\r\n" .
-                            '文件路径：' . $local_file_name . "\r\n" .
-                            '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
+                    '文件路径：' . $local_file_name . "\r\n" .
+                    '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
                     self::my_error_log($error);
+                } else {
+                    try {
+                        $delete_local_succeed = unlink($local_file_name);    
+                    } catch (Exception $e) {
+                        $error = '错误：删除本地文件失败' . "\r\n" .
+                        '错误描述：' . $e->getMessage() . "\r\n" .
+                        '文件路径：' . $local_file_name . "\r\n" .
+                        '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
+                        self::my_error_log($error);
+                    }
                 }
             } else {
                 $delete_local_succeed = true;
             }
         }
-
         return $delete_local_succeed && ($ali_response['info']['http_code'] === 204);
     }
 
@@ -699,15 +707,16 @@ window.onload = function() {
     private static function my_error_log(&$error) {
         $upload_root = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
                             defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__);
-        $error_log_path = $upload_root . self::LOG_SUFFIX . 'error.log';
+        $error_log_file = $upload_root . self::LOG_SUFFIX . 'error.log';
 
-        if (!is_dir($error_log_path)) {
+        $log_dir = dirname($error_log_file);
+        if (!is_dir($log_dir)) {
             if (is_writeable($upload_root)) {
-                self::makeUploadDir($error_log_path);
+                self::makeUploadDir($log_dir);
             }
         }
-        if (is_writeable($error_log_path)) {
-            error_log($error, 3, $error_log_path);
+        if (is_writeable($log_dir)) {
+            error_log($error, 3, $error_log_file);
         }
     }
 
