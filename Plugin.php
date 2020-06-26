@@ -259,7 +259,7 @@ window.onload = function() {
             $oss_client = new OssClient($access_id, $access_key, $end_point);
             $oss_client->doesBucketExist($bucket_name);
         } catch (Exception $e) {
-            $error = '错误：连接OSS Client实例失败，请检查ACCESS KEY设置' . "\r\n" .
+            $error = '错误：连接OSS Client实例失败' . "\r\n" .
                     '错误描述：' . $e->getMessage() . "\r\n" .
                     '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
             self::my_error_log($error);
@@ -360,7 +360,7 @@ window.onload = function() {
         }
 
         if (200 != $ali_response['info']['http_code']) {
-            $error = '错误：将文件储存到OSS失败' . "\r\n" .
+            $error = '错误：将文件储存到OSS时返回码不正常' . "\r\n" .
                     '错误码：' . $ali_response['info']['http_code'] . "\r\n" .
                     '远程文件：' . $remote_file_name . "\r\n" .
                     '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
@@ -369,15 +369,12 @@ window.onload = function() {
         } else {
             if ($save_on_server === "1" && !Typecho_Common::isAppEngine()) {
                 $file_dir_name = dirname($local_file_name);
-                $dir_exist = false;
+                $dir_exist = true;
 
-                if (is_dir($file_dir_name)) {
-                    $dir_exist = true;
-                } else {
-                    if (self::makeUploadDir($file_dir_name)) {
-                        $dir_exist = true;
-                    }
+                if (!is_dir($file_dir_name) && !self::makeUploadDir($file_dir_name)) {
+                    $dir_exist = false;
                 }
+
                 if ($dir_exist) {
                     if (!file_put_contents($local_file_name, $content)) {
                         $error = '错误：文件已保存到OSS，将文件储存到本地服务器时失败，请手动删除OSS上的文件' . "\r\n" .
@@ -421,13 +418,14 @@ window.onload = function() {
         if (empty($file['name'])) {
             return false;
         }
+        $ext = self::getExtentionName($file['name']);
         if ($content['attachment']->type != $ext) {
             return false;
         }
         if (isset($file['tmp_name'])) {
-            $new_content = file_get_contents($file['tmp_name']);
+            $new_file_content = file_get_contents($file['tmp_name']);
         } else if (isset($file['bytes'])) {
-            $new_content = $file['bytes'];
+            $new_file_content = $file['bytes'];
         } else {
             return false;
         }
@@ -440,27 +438,38 @@ window.onload = function() {
                 $options->plugin('AliOssForTypecho')->endPoint . $options->plugin('AliOssForTypecho')->endPointType);
         $access_id   = $options->plugin('AliOssForTypecho')->accessKeyId;
         $access_key  = $options->plugin('AliOssForTypecho')->accessKeySecret;
-
-        $ext = self::getExtentionName($file['name']);
          
         $path = $content['attachment']->path;
         
-        $object_name = $userDir . $path;
+        $remote_file_name = $userDir . $path;
 
         try {
             $oss_client = new OssClient($access_id, $access_key, $end_point);
             $oss_client->doesBucketExist($bucket_name);
         } catch (Exception $e) {
-            $error = '错误：连接OSS Client实例失败，请检查ACCESS KEY设置' . "\r\n" .
+            $error = '错误：连接OSS Client实例失败' . "\r\n" .
                     '错误描述：' . $e->getMessage() . "\r\n" .
                     '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
             self::my_error_log($error);
             return false;
         }
 
-        $ali_response = $oss_client->putObject($bucket_name, $object_name, $new_content);
-
+        try{
+            $ali_response = $oss_client->putObject($bucket_name, $remote_file_name, $new_file_content);
+        } catch(OssException $e) {
+            $error = '错误：将文件储存到OSS时失败' . "\r\n" .
+                    '错误描述：' . $e->getMessage() . "\r\n" .
+                    '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
+            self::my_error_log($error);
+            return false;
+        }
+        
         if (200 != $ali_response['info']['http_code']) {
+            $error = '错误：将文件储存到OSS时返回码不正常' . "\r\n" .
+                    '错误码：' . $ali_response['info']['http_code'] . "\r\n" .
+                    '远程文件：' . $remote_file_name . "\r\n" .
+                    '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
+            self::my_error_log($error);
             return false;
         } else {
             $ifLoaclSave = $options->plugin('AliOssForTypecho')->ifLoaclSave;
@@ -468,38 +477,36 @@ window.onload = function() {
             if ($ifLoaclSave === "1" && !Typecho_Common::isAppEngine()) {
                 $upload_root = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
                     defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__);
-                $localFile = $upload_root . $path;
+                $local_file_name = $upload_root . $path;
 
-                $localPath = dirname($localFile);
-
-                $mkdirSuccess = true;
-                if (!is_dir($localPath) && !self::makeUploadDir($localPath)) {
-                    $mkdirSuccess = false;
+                if (file_exists($local_file_name) && !unlink($local_file_name)) {
+                    $error = '错误：修改文件失败，无法删除旧文件' . "\r\n" .
+                                '本地文件：' . $local_file_name . "\r\n" .
+                                '远程文件：' . $object_url . "\r\n" .
+                                '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
+                    self::my_error_log($error);
+                    return false;
                 }
 
-                if ($mkdirSuccess) {
-                    if (!unlink($localFile)) {
-                        $error = '错误：修改文件失败，无法删除旧文件失败' . "\r\n" .
-                                 '本地文件：' . $localFile . "\r\n" .
-                                 '远程文件：' . $object_url . "\r\n" .
-                                 '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
-                        self::my_error_log($error);
-                        return false;
-                    } else {
-                        if (file_put_contents($localFile, $new_content)) {
-                        } else {
-                            $error = '错误：修改文件失败，无法保存新文件' . "\r\n" .
-                                    '本地文件：' . $localFile . "\r\n" .
-                                     '远程文件：' . $object_url . "\r\n" .
-                                     '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
-                            self::my_error_log($error);
-                            return false;
-                        }
+                $file_dir_name = dirname($local_file_name);
+                $dir_exist = true;
+
+                if (!is_dir($file_dir_name) && !self::makeUploadDir($file_dir_name)) {
+                    $dir_exist = false;
+                }
+
+                if ($dir_exist) {
+                    if (!file_put_contents($local_file_name, $new_file_content)) {
+                        $error = '错误：文件已保存到OSS，将文件储存到本地服务器时失败，请手动删除OSS上的文件' . "\r\n" .
+                            '文件路径：' . $local_file_name . "\r\n" .
+                            '远程文件：' . $remote_file_name . "\r\n" .
+                            '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
+                    self::my_error_log($error);
+                    return false;
                     }
                 } else {
-                    $error = '错误：修改文件失败，无法创建目录' . "\r\n" .
-                            '本地文件：' . $localFile . "\r\n" .
-                             '创建路径：' . $localPath . "\r\n" .
+                    $error = '错误：文件已保存到OSS，将文件储存到本地服务器时创建目录失败，请检查服务器权限设置，请手动删除OSS上的文件' . "\r\n" .
+                             '无法创建路径：' . $file_dir_name . "\r\n" .
                              '远程文件：' . $remote_file_name . "\r\n" .
                              '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
                     self::my_error_log($error);
@@ -542,7 +549,7 @@ window.onload = function() {
             $oss_client = new OssClient($access_id, $access_key, $end_point);
             $oss_client->doesBucketExist($bucket_name);
         } catch (Exception $e) {
-            $error = '错误：删除文件失败，无法连接OSS Client实例，请检查ACCESS KEY设置' . "\r\n" .
+            $error = '错误：删除文件失败，无法连接OSS Client实例' . "\r\n" .
                     '错误描述：' . $e->getMessage() . "\r\n" .
                     'OSS文件:' . $object_name . "\r\n" .
                     '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
@@ -559,7 +566,7 @@ window.onload = function() {
                     '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
             self::my_error_log($error);
         }
-        
+
         $delete_local_succeed = true;
         if ($ifLoaclSave === "1" && !Typecho_Common::isAppEngine()) {
             $upload_root = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
