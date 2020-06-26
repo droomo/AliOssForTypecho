@@ -10,7 +10,7 @@ use OSS\Core\OssException;
  * 
  * @package AliOssForTypecho 
  * @author droomo.
- * @version 1.1.3
+ * @version 1.1.4
  * @link https://www.droomo.top/
  */
 class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
@@ -171,41 +171,41 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
         $form->addInput(new Typecho_Widget_Helper_Form_Element_Text('des', NULL, '', '', ''));
 ?>
 <script>
-    window.onload = function() {
-        (function () {
-            document.getElementsByName("des")[0].type = "hidden";
-            var AliossForTypecho_otherSelected = document.getElementsByName("endPoint")[0].value === "other";
-            var AliossForTypecho_otherEndpointShowingTags = document.getElementsByClassName("AliossForTypecho-mark-other-endpoint-show");
-            var AliossForTypecho_otherEndpointHiddingTags = document.getElementsByClassName("AliossForTypecho-mark-other-endpoint-hide");
-            var AliossForTypecho_otherEndPointInputTag = document.getElementsByName("otherEndPoint")[0];
-            var AliossForTypecho_endPointTypeInputTag = document.getElementsByName("endPointType")[0];
-            var AliossForTypecho_loadLabels = function () {
-                var AliossForTypecho_s1 = null, AliossForTypecho_s2 = null;
-                if (AliossForTypecho_otherSelected) {
-                    AliossForTypecho_s1 = "none";
-                    AliossForTypecho_s2 = "block";
-                    AliossForTypecho_otherEndPointInputTag.type = "text";
-                } else {
-                    AliossForTypecho_s2 = "none";
-                    AliossForTypecho_s1 = "block";
-                    AliossForTypecho_otherEndPointInputTag.type = "hidden";
-                    AliossForTypecho_endPointTypeInputTag.type = "";
-                }
-                AliossForTypecho_endPointTypeInputTag.style.display = AliossForTypecho_s1;
-                for (var AliossForTypecho_i = 0; AliossForTypecho_i < AliossForTypecho_otherEndpointShowingTags.length; AliossForTypecho_i++) {
-                    AliossForTypecho_otherEndpointShowingTags[AliossForTypecho_i].style.display = AliossForTypecho_s2;
-                }
-                for (var AliossForTypecho_i = 0; AliossForTypecho_i < AliossForTypecho_otherEndpointHiddingTags.length; AliossForTypecho_i++) {
-                    AliossForTypecho_otherEndpointHiddingTags[AliossForTypecho_i].style.display = AliossForTypecho_s1;
-                }
-            };
-            document.getElementsByName("endPoint")[0].onchange = function(e) {
-                AliossForTypecho_otherSelected = e.target.value === "other";
-                AliossForTypecho_loadLabels();
-            };
+window.onload = function() {
+    (function () {
+        document.getElementsByName("des")[0].type = "hidden";
+        var AliossForTypecho_otherSelected = document.getElementsByName("endPoint")[0].value === "other";
+        var AliossForTypecho_otherEndpointShowingTags = document.getElementsByClassName("AliossForTypecho-mark-other-endpoint-show");
+        var AliossForTypecho_otherEndpointHiddingTags = document.getElementsByClassName("AliossForTypecho-mark-other-endpoint-hide");
+        var AliossForTypecho_otherEndPointInputTag = document.getElementsByName("otherEndPoint")[0];
+        var AliossForTypecho_endPointTypeInputTag = document.getElementsByName("endPointType")[0];
+        var AliossForTypecho_loadLabels = function () {
+            var AliossForTypecho_s1 = null, AliossForTypecho_s2 = null;
+            if (AliossForTypecho_otherSelected) {
+                AliossForTypecho_s1 = "none";
+                AliossForTypecho_s2 = "block";
+                AliossForTypecho_otherEndPointInputTag.type = "text";
+            } else {
+                AliossForTypecho_s2 = "none";
+                AliossForTypecho_s1 = "block";
+                AliossForTypecho_otherEndPointInputTag.type = "hidden";
+                AliossForTypecho_endPointTypeInputTag.type = "";
+            }
+            AliossForTypecho_endPointTypeInputTag.style.display = AliossForTypecho_s1;
+            for (var AliossForTypecho_i = 0; AliossForTypecho_i < AliossForTypecho_otherEndpointShowingTags.length; AliossForTypecho_i++) {
+                AliossForTypecho_otherEndpointShowingTags[AliossForTypecho_i].style.display = AliossForTypecho_s2;
+            }
+            for (var AliossForTypecho_i = 0; AliossForTypecho_i < AliossForTypecho_otherEndpointHiddingTags.length; AliossForTypecho_i++) {
+                AliossForTypecho_otherEndpointHiddingTags[AliossForTypecho_i].style.display = AliossForTypecho_s1;
+            }
+        };
+        document.getElementsByName("endPoint")[0].onchange = function(e) {
+            AliossForTypecho_otherSelected = e.target.value === "other";
             AliossForTypecho_loadLabels();
-        })();
-    }
+        };
+        AliossForTypecho_loadLabels();
+    })();
+}
 </script>
 <?php
     }
@@ -473,10 +473,8 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
                 $localPath = dirname($localFile);
 
                 $mkdirSuccess = true;
-                if (!is_dir($localPath)) {
-                    if (!self::makeUploadDir($localPath)) {
-                        $mkdirSuccess = false;
-                    }
+                if (!is_dir($localPath) && !self::makeUploadDir($localPath)) {
+                    $mkdirSuccess = false;
                 }
 
                 if ($mkdirSuccess) {
@@ -538,41 +536,50 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
         $access_key  = $options->plugin('AliOssForTypecho')->accessKeySecret;
         $ifLoaclSave = $options->plugin('AliOssForTypecho')->ifLoaclSave;
 
+        $path = $content['attachment']->path;
+        $object_name = $userDir . $path;
         try {
             $oss_client = new OssClient($access_id, $access_key, $end_point);
             $oss_client->doesBucketExist($bucket_name);
         } catch (Exception $e) {
-            $error = '错误：连接OSS Client实例失败，请检查ACCESS KEY设置' . "\r\n" .
+            $error = '错误：删除文件失败，无法连接OSS Client实例，请检查ACCESS KEY设置' . "\r\n" .
                     '错误描述：' . $e->getMessage() . "\r\n" .
+                    'OSS文件:' . $object_name . "\r\n" .
                     '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
             self::my_error_log($error);
             return false;
         }
 
-        $path = $content['attachment']->path;
-        $object_name = $userDir . $path;
         try {
             $ali_response = $oss_client->deleteObject($bucket_name, $object_name);
         } catch (Exception $e) {
             $error = '错误：删除OSS文件失败' . "\r\n" .
                     '错误描述：' . $e->getMessage() . "\r\n" .
+                    'OSS文件： ' . $object_name . "\r\n" .
                     '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
             self::my_error_log($error);
         }
         
+        $delete_local_succeed = true;
         if ($ifLoaclSave === "1" && !Typecho_Common::isAppEngine()) {
             $upload_root = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
                                 defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__);
             $local_file_name = $upload_root . $path;
             
-            $delete_local_succeed = unlink($local_file_name);
-            if (!$delete_local_succeed) {
-                $error = '错误：删除本地文件失败' . "\r\n" .
-                         '文件：' . $local_file_name . "\r\n" .
-                         '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
-                self::my_error_log($error);
+            $delete_local_succeed = false;
+            if (file_exists($local_file_name)) {
+                $delete_local_succeed = unlink($local_file_name);
+                if (!$delete_local_succeed) {
+                    $error = '错误：删除本地文件失败，请检查权限设置' . "\r\n" .
+                            '文件路径：' . $local_file_name . "\r\n" .
+                            '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
+                    self::my_error_log($error);
+                }
+            } else {
+                $delete_local_succeed = true;
             }
         }
+
         return $delete_local_succeed && ($ali_response['info']['http_code'] === 204);
     }
 
