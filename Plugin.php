@@ -10,13 +10,42 @@ use OSS\Core\OssException;
  * 
  * @package AliOssForTypecho 
  * @author droomo.
- * @version 1.1.5
+ * @version 1.1.6
  * @link https://www.droomo.top/
  */
-class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
-{
+
+class AliOssForTypecho_Plugin extends Typecho_Widget implements Typecho_Plugin_Interface {
+
     const UPLOAD_DIR = 'usr/uploads/';//上传文件目录，相对网站根目录
     const LOG_SUFFIX = '__oss-plugin-log/';//日志目录，放置于UPLOAD_DIR下
+
+    public function api_version() {
+        echo __FUNCTION__;
+        var_dump (self::get_plugin_information()['version']);
+    }
+    public function api_log() {
+        if ($_SERVER['REQUEST_METHOD'] == 'GET') {
+        } else {
+        }
+    }
+
+    public static function get_plugin_information() {
+        Typecho_Widget::widget('Widget_Plugins_List@activated', 'activated=1')->to($activatedPlugins);
+        $activatedPlugins = json_decode(json_encode($activatedPlugins),true);
+        $plugins_list = $activatedPlugins['stack'];
+        $plugins_info = array();
+        for ($i = 0; $i < count($plugins_list); $i++){
+            if($plugins_list[$i]['title'] == 'AliOssForTypecho'){
+                $plugins_info = $plugins_list[$i];
+                break;
+            }
+        }
+        if (count($plugins_info) < 1) {
+            return false;
+        }
+        return $plugins_info;
+    }
+    
 
     /**
      * 激活插件方法,如果激活失败,直接抛出异常
@@ -25,13 +54,15 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
      * @return void
      * @throws Typecho_Plugin_Exception
      */
-    public static function activate()
-    {
+    public static function activate() {
         Typecho_Plugin::factory('Widget_Upload')->uploadHandle         = array('AliOssForTypecho_Plugin', 'uploadHandle');
         Typecho_Plugin::factory('Widget_Upload')->modifyHandle         = array('AliOssForTypecho_Plugin', 'modifyHandle');
         Typecho_Plugin::factory('Widget_Upload')->deleteHandle         = array('AliOssForTypecho_Plugin', 'deleteHandle');
         Typecho_Plugin::factory('Widget_Upload')->attachmentHandle     = array('AliOssForTypecho_Plugin', 'attachmentHandle');
         Typecho_Plugin::factory('Widget_Upload')->attachmentDataHandle = array('AliOssForTypecho_Plugin', 'attachmentDataHandle');
+
+        Helper::addRoute('__alioss_for_tp_plugin_version__', '/__alioss_for_tp_plugin_api__/version', 'AliOssForTypecho_Plugin', 'api_version');
+        Helper::addRoute('__alioss_for_tp_plugin_log__', '/__alioss_for_tp_plugin_api__/log', 'AliOssForTypecho_Plugin', 'api_log');
 
         return _t('启用成功，请进行相应设置！');
     }
@@ -44,7 +75,10 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
      * @return void
      * @throws Typecho_Plugin_Exception
      */
-    public static function deactivate(){}
+    public static function deactivate() {
+        Helper::removeRoute('__alioss_for_tp_plugin_version__');
+        Helper::removeRoute('__alioss_for_tp_plugin_log__');
+    }
     
     /**
      * 获取插件配置面板
@@ -53,8 +87,7 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
      * @param Typecho_Widget_Helper_Form $form 配置面板
      * @return void
      */
-    public static function config(Typecho_Widget_Helper_Form $form)
-    {
+    public static function config(Typecho_Widget_Helper_Form $form) {
         $upload_root = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
                             defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__);
         
@@ -99,7 +132,6 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
 <textarea style="color:<?php echo $log_color;?>;height:160px;width:100%;"><?php echo $log_content;?></textarea></div>
 </div>
 <?php
-   
         $buketName = new Typecho_Widget_Helper_Form_Element_Text('bucketName', NULL, null,
             _t('Bucket名称'), _t('请填写Buket名称'));
         $form->addInput($buketName->addRule('required', _t('必须填写Bucket名称')));
@@ -172,7 +204,7 @@ class AliOssForTypecho_Plugin implements Typecho_Plugin_Interface
 ?>
 <script>
 window.onload = function() {
-    (function () {
+    (function() {
         document.getElementsByName("des")[0].type = "hidden";
         var AliossForTypecho_otherSelected = document.getElementsByName("endPoint")[0].value === "other";
         var AliossForTypecho_otherEndpointShowingTags = document.getElementsByClassName("AliossForTypecho-mark-other-endpoint-show");
@@ -217,7 +249,7 @@ window.onload = function() {
      * @param Typecho_Widget_Helper_Form $form
      * @return void
      */
-    public static function personalConfig(Typecho_Widget_Helper_Form $form){}
+    public static function personalConfig(Typecho_Widget_Helper_Form $form) {}
         
     /**
      * 上传文件处理函数
@@ -226,8 +258,7 @@ window.onload = function() {
      * @param array $file 上传的文件
      * @return mixed
      */
-    public static function uploadHandle($file)
-    {
+    public static function uploadHandle($file) {
         if (empty($file['name'])) {
             return FALSE;
         }
@@ -724,4 +755,5 @@ window.onload = function() {
         $info = pathinfo($name);
         return isset($info['extension']) ? strtolower($info['extension']) : '';
     }
+
 }
