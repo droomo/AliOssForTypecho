@@ -10,7 +10,7 @@ use OSS\Core\OssException;
  * 
  * @package AliOssForTypecho 
  * @author droomo.
- * @version 1.1.6
+ * @version 1.1.7
  * @link https://www.droomo.top/
  */
 
