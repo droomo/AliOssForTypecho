@@ -10,7 +10,7 @@ use OSS\Core\OssException;
  * 
  * @package AliOssForTypecho 
  * @author droomo.
- * @version 1.1.7
+ * @version 1.1.8
  * @link https://www.droomo.top/
  */
 
@@ -101,7 +101,7 @@ class AliOssForTypecho_Plugin extends Typecho_Widget implements Typecho_Plugin_I
                 self::makeUploadDir($upload_root . self::LOG_SUFFIX);
                 fopen($log_file_name, 'w');
                 if (!file_exists($log_file_name)) {
-                    $log_content = '无法创建日志文件，请检查权限设置！！！';
+                    $log_content = '无法创建日志文件，请检查权限设置！！！开启SELinux的用户注意合理配置权限！';
                     $log_color = '#f00000';
                 }
             } else {
@@ -119,7 +119,7 @@ class AliOssForTypecho_Plugin extends Typecho_Widget implements Typecho_Plugin_I
         } else {
             $log_content = '！！！注意！！！ 
 当前网站上传目录无写入权限，无法记录日志！
-请给路径 '.$upload_root.' 赋予写入权限';
+请给路径 '.$upload_root.' 赋予写入权限。开启SELinux的用户注意合理配置权限。';
             $log_color = '#f00000';
         }
 ?>
@@ -128,7 +128,7 @@ class AliOssForTypecho_Plugin extends Typecho_Widget implements Typecho_Plugin_I
 <ol>
 <li>插件基于<a href="https://github.com/aliyun/aliyun-oss-php-sdk/releases/tag/v2.3.1">aliyun-oss-php-sdk Release 2.3.1</a>开发，
 若以后SDK开发包更新导致插件不可用，请到 <a target="_blank" href="https://www.droomo.top/AliOssForTypecho.html">我的博客^-^</a>获取新版本插件，如果我还用typecho、阿里云OSS就会更新。<br/></li>
-<li>为保证正确记录日志，请赋予以下目录写权限：<code style="color:#333;font-size:12px;"><?php echo $upload_root;?></code>，并定期查阅日志处理事件错误。</li>
+<li>为保证正确记录日志，请赋予以下目录写权限：<code style="color:#333;font-size:12px;"><?php echo $upload_root;?></code>，并定期查阅日志处理事件错误。开启SELinux的用户注意合理配置权限。</li>
 <li>当文件成功上传到OSS，但保存到服务器失败时，总体进度会显示失败。在OSS中的文件不会自动删除，请根据错误日志自行处理。</li>
 <li>运行在云应用引擎上的站点“在服务器保留备份”选项无效，且无法记录日志。</li>
 <li>旧版本Typecho存在无法上传大写扩展名文件的bug，请更新Typecho程序。<br/></li>
@@ -416,7 +416,7 @@ window.onload = function() {
 
                 if ($dir_exist) {
                     if (!file_put_contents($local_file_name, $content)) {
-                        $error = '错误：文件已保存到OSS，将文件储存到本地服务器时失败，请手动删除OSS上的文件' . "\r\n" .
+                        $error = '错误：文件已保存到OSS，将文件储存到本地服务器时失败，请手动删除OSS上的文件，开启SELinux的用户注意合理配置权限。' . "\r\n" .
                              '文件路径：' . $local_file_name . "\r\n" .
                              '远程文件：' . $remote_file_name . "\r\n" .
                              '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
@@ -424,7 +424,7 @@ window.onload = function() {
                         return false;
                     }
                 } else {
-                    $error = '错误：文件已保存到OSS，将文件储存到本地服务器时创建目录失败，请检查服务器权限设置，请手动删除OSS上的文件' . "\r\n" .
+                    $error = '错误：文件已保存到OSS，将文件储存到本地服务器时创建目录失败，请检查服务器权限设置，开启SELinux的用户注意合理配置权限。' . "\r\n" .
                              '无法创建路径：' . $file_dir_name . "\r\n" .
                              '远程文件：' . $remote_file_name . "\r\n" .
                              '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
@@ -488,7 +488,7 @@ window.onload = function() {
         $local_file_name = $upload_root . $path;
 
         if ($ifLoaclSave && (!is_writable($upload_root) || !is_writable($local_file_name))) {
-            $error = '错误：修改文件失败，旧文件无写权限' . "\r\n" .
+            $error = '错误：修改文件失败，旧文件无写权限，开启SELinux的用户注意合理配置权限。' . "\r\n" .
                             '本地文件：' . $local_file_name . "\r\n" .
                             '远程文件：' . $remote_file_name . "\r\n" .
                             '时间：' . date('Y-m-d h:i:sa') . "\r\n\r\n";
