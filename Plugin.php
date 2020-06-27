@@ -195,16 +195,16 @@ class AliOssForTypecho_Plugin extends Typecho_Widget implements Typecho_Plugin_I
             _t('自定义（CDN）域名'), '请填写自定义域名，留空则使用外网Endpoint访问，以http://或https://开头，以"/"结尾');
         $form->addInput($cdnUrl);
         
+        $diy_style = new Typecho_Widget_Helper_Form_Element_Text('des', NULL, '', _t('默认自定义样式'), 
+        _t('通过后缀的方式使用自定义样式，留空为不使用。使用详情见<a target="_blank" href="https://help.aliyun.com/document_detail/48884.html">阿里云文档</a>'));
+        $form->addInput($diy_style);
+        
         $form->addInput(new Typecho_Widget_Helper_Form_Element_Radio('ifLoaclSave', array( "1" => '保留', "0" => '不保留' ), "1",
         _t('在服务器保留备份'), _t('是否在服务器保留备份')));
-        
-        // The following line is used to fix bugs left in history.
-        $form->addInput(new Typecho_Widget_Helper_Form_Element_Text('des', NULL, '', '', ''));
 ?>
 <script>
 window.onload = function() {
     (function() {
-        document.getElementsByName("des")[0].type = "hidden";
         var AliossForTypecho_otherSelected = document.getElementsByName("endPoint")[0].value === "other";
         var AliossForTypecho_otherEndpointShowingTags = document.getElementsByClassName("AliossForTypecho-mark-other-endpoint-show");
         var AliossForTypecho_otherEndpointHiddingTags = document.getElementsByClassName("AliossForTypecho-mark-other-endpoint-hide");
@@ -644,18 +644,19 @@ window.onload = function() {
      * @return string
      */
     public static function attachmentHandle(array $content) {
-        $options = Typecho_Widget::widget('Widget_Options');
+        $options    = Typecho_Widget::widget('Widget_Options');
         
-        $cdnUrl  = $options->plugin('AliOssForTypecho')->cdnUrl;
-        $userDir     = $options->plugin('AliOssForTypecho')->userDir;
+        $cdnUrl     = $options->plugin('AliOssForTypecho')->cdnUrl;
+        $userDir    = $options->plugin('AliOssForTypecho')->userDir;
+        $diy_style  = $options->plugin('AliOssForTypecho')->des;
         if (empty($cdnUrl)) {
             $bucket_name = $options->plugin('AliOssForTypecho')->bucketName;
             $end_point   = ($options->plugin('AliOssForTypecho')->endPoint === "other") ? 
                             $options->plugin('AliOssForTypecho')->otherEndPoint : 
                             $options->plugin('AliOssForTypecho')->endPoint;
-            return 'https://' . $bucket_name . '.' . $end_point . '.aliyuncs.com/' . $userDir . $content['attachment']->path;
+            return 'https://' . $bucket_name . '.' . $end_point . '.aliyuncs.com/' . $userDir . $content['attachment']->path . $diy_style;
         } else {
-            return $cdnUrl . $userDir . $content['attachment']->path;
+            return $cdnUrl . $userDir . $content['attachment']->path . $diy_style;
         }
     }
 
