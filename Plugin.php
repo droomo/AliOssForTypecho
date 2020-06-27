@@ -117,13 +117,11 @@ class AliOssForTypecho_Plugin extends Typecho_Widget implements Typecho_Plugin_I
 <div>
 <h3>插件使用说明</h3>
 <ol>
-<li>插件更新于2020年6月25号。</li>
 <li>插件基于<a href="https://github.com/aliyun/aliyun-oss-php-sdk/releases/tag/v2.3.1">aliyun-oss-php-sdk Release 2.3.1</a>开发，
 若以后SDK开发包更新导致插件不可用，请到 <a target="_blank" href="https://www.droomo.top/AliOssForTypecho.html">我的博客^-^</a>获取新版本插件，如果我还用typecho、阿里云OSS就会更新。<br/></li>
-<li>若开启“在服务器保留备份”功能，请注意：<br>
-1）请赋予以下目录写权限：<code style="color:#333;font-size:12px;"><?php echo $upload_root;?></code><br/>
-2）当文件成功上传到OSS，但保存到服务器失败时，插件不会报错，<font color="red">这将导致当前文件在服务器上没有备份</font>，但是会在此插件页面显示日志，请定期查阅并清理。<br/></li>
-3）运行在云应用引擎上的站点“在服务器保留备份”选项无效。<br/>
+<li>为保证正确记录日志，请赋予以下目录写权限：<code style="color:#333;font-size:12px;"><?php echo $upload_root;?></code>，并定期查阅日志处理事件错误。</li>
+<li>当文件成功上传到OSS，但保存到服务器失败时，总体进度会显示失败。在OSS中的文件不会自动删除，请根据错误日志自行处理。</li>
+<li>运行在云应用引擎上的站点“在服务器保留备份”选项无效，且无法记录日志。</li>
 <li>旧版本Typecho存在无法上传大写扩展名文件的bug，请更新Typecho程序。<br/></li>
 <li>如有问题或建议请到 <a target="_blank" href="https://www.droomo.top/AliOssForTypecho.html">我的博客https://www.droomo.top/AliOssForTypecho.html</a> 留言</li>
 </ol>
@@ -736,18 +734,20 @@ window.onload = function() {
     }
 
     private static function my_error_log(&$error) {
-        $upload_root = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
+        if (!Typecho_Common::isAppEngine()) {
+            $upload_root = Typecho_Common::url(defined('__TYPECHO_UPLOAD_DIR__') ? __TYPECHO_UPLOAD_DIR__ : self::UPLOAD_DIR,
                             defined('__TYPECHO_UPLOAD_ROOT_DIR__') ? __TYPECHO_UPLOAD_ROOT_DIR__ : __TYPECHO_ROOT_DIR__);
-        $error_log_file = $upload_root . self::LOG_SUFFIX . 'error.log';
+            $error_log_file = $upload_root . self::LOG_SUFFIX . 'error.log';
 
-        $log_dir = dirname($error_log_file);
-        if (!is_dir($log_dir)) {
-            if (is_writeable($upload_root)) {
-                self::makeUploadDir($log_dir);
+            $log_dir = dirname($error_log_file);
+            if (!is_dir($log_dir)) {
+                if (is_writeable($upload_root)) {
+                    self::makeUploadDir($log_dir);
+                }
             }
-        }
-        if (is_writeable($log_dir)) {
-            error_log($error, 3, $error_log_file);
+            if (is_writeable($log_dir)) {
+                error_log($error, 3, $error_log_file);
+            }   
         }
     }
 
