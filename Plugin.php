@@ -126,6 +126,7 @@ class AliOssForTypecho_Plugin extends Typecho_Widget implements Typecho_Plugin_I
 <li>如有问题或建议请到 <a target="_blank" href="https://www.droomo.top/AliOssForTypecho.html">我的博客https://www.droomo.top/AliOssForTypecho.html</a> 留言</li>
 </ol>
 <p>以下是本插件产生的错误日志，请定期查看并处理：</p>
+<p>日志文件是&nbsp;&nbsp;<span style="color:#666;font-sieze:8px"><?php echo $log_file_name;?><span></p>
 <div style="width:98%;margin: 0 auto">
 <textarea style="color:<?php echo $log_color;?>;height:160px;width:100%;"><?php echo $log_content;?></textarea></div>
 </div>
