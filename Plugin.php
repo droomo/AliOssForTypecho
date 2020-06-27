@@ -94,17 +94,26 @@ class AliOssForTypecho_Plugin extends Typecho_Widget implements Typecho_Plugin_I
         $log_file_name = $upload_root . self::LOG_SUFFIX . 'error.log';
         
         if (is_writable($upload_root)) {
+            $log_content = '恭喜！暂无错误日志产生，请继续保持维护～';
+            $log_color = '#009900';
+
             if (!file_exists($log_file_name)) {
                 self::makeUploadDir($upload_root . self::LOG_SUFFIX);
                 fopen($log_file_name, 'w');
-            }
-            $log_content = '恭喜！暂无错误日志产生，请继续保持维护～';
-            $log_color = '#009900';
-            if (file_exists($log_file_name)) {
-                $content = file_get_contents($log_file_name);
-                if ($content) {
-                    $log_content = $content;
-                    $log_color = '#dd0000';
+                if (!file_exists($log_file_name)) {
+                    $log_content = '无法创建日志文件，请检查权限设置！！！';
+                    $log_color = '#f00000';
+                }
+            } else {
+                try {
+                    $content = file_get_contents($log_file_name);
+                    if ($content) {
+                        $log_content = $content;
+                        $log_color = '#dd0000';
+                    }
+                } catch (Exception $e) {
+                    $log_content = '注意！无法读取日志文件，请检查文件状态！';
+                    $log_color = '#f00000';
                 }
             }
         } else {
