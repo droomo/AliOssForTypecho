@@ -1,6 +1,6 @@
 <?php
 
-require_once 'aliyun-oss-php-sdk-2.3.1/autoload.php';
+require_once 'aliyun-oss-php-sdk-2.4.3/autoload.php';
 
 use OSS\OssClient;
 use OSS\Core\OssException;
