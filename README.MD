@@ -2,7 +2,7 @@
 
 ### 介绍
 用于将Typecho上传的附件保存到阿里云的OSS。
-最后更新于2022年1月。
+最后更新于2023年2月。
 
 ### 特性
 1. 可以选择只保存到OSS，或同时保存到OSS和服务器，方便维护；
@@ -11,3 +11,4 @@
 4. 可以自定义CDN地址、OSS储存前缀、OSS连接方式（内网、外网）；
 5. 可以使用自定义样式。借鉴 [DefectingCat](https://github.com/DefectingCat/AliOssForTypecho-)
 6. 感谢[Jump-Boy](https://github.com/Jump-Boy/AliOssForTypecho)提交PR更新OSS SDK以适配PHP8.
+7. 修复因为上传时阿里云将url中的字符集自动替换成ascill码，而服务器匹配url时出错
