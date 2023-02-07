@@ -658,23 +658,18 @@ window.onload = function() {
         $userDir    = $options->plugin('AliOssForTypecho')->userDir;
         $diy_style  = $options->plugin('AliOssForTypecho')->des;
 
-        // $newPath = str_replace(array('(', ')'), array(chr(ord('(')), chr(ord(')'))), $content['attachment']->path);
-        $newPath = urlencode($content['attachment']->path);
-        $newPath = str_replace('(', '%28', $newPath);
-        $newPath = str_replace(')', '%29', $newPath);
-
+		$newPath = urlencode($content['attachment']->path);
 
         if (empty($cdnUrl)) {
             $bucket_name = $options->plugin('AliOssForTypecho')->bucketName;
             $end_point   = ($options->plugin('AliOssForTypecho')->endPoint === "other") ? 
                             $options->plugin('AliOssForTypecho')->otherEndPoint : 
                             $options->plugin('AliOssForTypecho')->endPoint;
-            
-            return 'https://' . $bucket_name . '.' . $end_point . '.aliyuncs.com/' . $userDir . $newPath . $diy_style;
-            //return 'https://' . $bucket_name . '.' . $end_point . '.aliyuncs.com/' . $userDir . $content['attachment']->path . $diy_style;
-        } else {
-            return $cdnUrl . $userDir . $newPath . $diy_style;
-            //return $cdnUrl . $userDir . $content['attachment']->path . $diy_style;
+            // return 'https://' . $bucket_name . '.' . $end_point . '.aliyuncs.com/' . $userDir . $content['attachment']->path . $diy_style;
+			return 'https://' . $bucket_name . '.' . $end_point . '.aliyuncs.com/' . $userDir . $newPath . $diy_style;
+		} else {
+            // return $cdnUrl . $userDir . $content['attachment']->path . $diy_style;
+			return $cdnUrl . $userDir . $newPath . $diy_style;
         }
     }
 
@@ -747,10 +742,6 @@ window.onload = function() {
     private static function getSafeName(&$name) {
         $name = str_replace(array('"', '<', '>'), '', $name);
         $name = str_replace('\\', '/', $name);
-        //
-        // $name = str_replace('(', '%28', $name);
-        // $name = str_replace(')', '%29', $name);
-        //
         $name = false === strpos($name, '/') ? ('a' . $name) : str_replace('/', '/a', $name);
         $info = pathinfo($name);
         $name = substr($info['basename'], 1);
