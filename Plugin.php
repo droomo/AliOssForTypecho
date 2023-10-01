@@ -654,18 +654,22 @@ window.onload = function() {
      */
     public static function attachmentHandle(array $content) {
         $options    = Typecho_Widget::widget('Widget_Options');
-        
         $cdnUrl     = $options->plugin('AliOssForTypecho')->cdnUrl;
         $userDir    = $options->plugin('AliOssForTypecho')->userDir;
         $diy_style  = $options->plugin('AliOssForTypecho')->des;
+
+		$newPath = urlencode($content['attachment']->path);
+
         if (empty($cdnUrl)) {
             $bucket_name = $options->plugin('AliOssForTypecho')->bucketName;
             $end_point   = ($options->plugin('AliOssForTypecho')->endPoint === "other") ? 
                             $options->plugin('AliOssForTypecho')->otherEndPoint : 
                             $options->plugin('AliOssForTypecho')->endPoint;
-            return 'https://' . $bucket_name . '.' . $end_point . '.aliyuncs.com/' . $userDir . $content['attachment']->path . $diy_style;
-        } else {
-            return $cdnUrl . $userDir . $content['attachment']->path . $diy_style;
+            // return 'https://' . $bucket_name . '.' . $end_point . '.aliyuncs.com/' . $userDir . $content['attachment']->path . $diy_style;
+			return 'https://' . $bucket_name . '.' . $end_point . '.aliyuncs.com/' . $userDir . $newPath . $diy_style;
+		} else {
+            // return $cdnUrl . $userDir . $content['attachment']->path . $diy_style;
+			return $cdnUrl . $userDir . $newPath . $diy_style;
         }
     }
 
